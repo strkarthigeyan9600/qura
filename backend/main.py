@@ -81,7 +81,7 @@ async def boundaries(request: Request, call_next):
             if origin and origin not in allowed_origins():raise HTTPException(403,'Origin is not allowed')
             if not origin and request.cookies and __import__('os').getenv('QURA_TESTING')!='1':
                 raise HTTPException(403,'Cookie-authenticated changes require an allowed Origin header')
-        public=['/api/health','/api/auth/register','/api/auth/login','/api/auth/refresh','/api/auth/logout']
+        public=['/api/auth/demo-status','/api/auth/demo-login','/api/health','/api/auth/register','/api/auth/login','/api/auth/refresh','/api/auth/logout']
         if path.startswith('/api/') and path not in public and request.method!='OPTIONS':
             user=current_user(request)
             if any(path.startswith(prefix) for prefix in ['/api/datasets','/api/models','/api/experiments','/api/preprocess']) and user['role'] not in ['doctor','admin']:

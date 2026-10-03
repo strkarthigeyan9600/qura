@@ -163,6 +163,43 @@ def login(payload: Login,request: Request,response: Response) -> dict[str,Any]:
     if not row['approved']:raise HTTPException(403,'Account registration is awaiting administrator approval')
     user=public_user(row);issue_session(response,user);audit(user['id'],'login','session');return user
 
+def local_demo_allowed(request: Request) -> bool:
+    """Credential-free entry is restricted to the isolated loopback demo."""
+    from urllib.parse import urlsplit
+    from backend.settings import storage_dir
+    return (os.getenv('QURA_LOCAL_DEMO') == 'true'
+            and storage_dir().name == 'storage-local-demo'
+            and request.client is not None and request.client.host in ('127.0.0.1', '::1')
+            and urlsplit(request.headers.get('origin') or (request.headers.get('referer', '') if request.method == 'GET' else '')).hostname in ('localhost', '127.0.0.1', '::1'))
+
+
+@router.get('/demo-status')
+def demo_status(request: Request) -> dict[str, bool]:
+    return {'enabled': local_demo_allowed(request)}
+
+
+class DemoLogin(BaseModel):
+    role: str
+
+
+@router.post('/demo-login')
+def demo_login(payload: DemoLogin, request: Request, response: Response) -> dict[str, Any]:
+    if not local_demo_allowed(request):
+        raise HTTPException(403, 'One-click demo login is available only in the local isolated demo')
+    accounts = {'patient': 'patient1', 'doctor': 'doctor1', 'admin': 'admin', 'driver': 'driver1', 'hospital': 'hospital2'}
+    if payload.role not in accounts:
+        raise HTTPException(422, 'Choose a supported demo role')
+    rate_limit('demo-login:' + request.client.host, 50, 300)
+    with connection() as c:
+        row = c.execute('SELECT * FROM users WHERE email=?', (accounts[payload.role] + '@qura.demo',)).fetchone()
+    if not row or not row['approved'] or row['role'] != payload.role:
+        raise HTTPException(503, 'Restart the local demo to initialize fictional accounts')
+    user = public_user(row)
+    issue_session(response, user)
+    audit(user['id'], 'local_demo_login', 'fictional-session')
+    return user
+
+
 @router.post('/refresh')
 def refresh(request: Request,response: Response) -> dict[str,Any]:
     """Rotate a valid refresh token; old refresh tokens stop working."""

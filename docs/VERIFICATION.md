@@ -53,3 +53,7 @@ Seven new backend tests validate the complete model-independent transport chain;
 The browser run exposed a race in which an earlier action response cleared a newer preparation note typed after a live state update. The handler now clears only the note value it actually submitted. Existing photo, reports, role-navigation, Arabic and consent flows remain in the suite. New care/emergency copy is English; existing core catalogs retain Arabic RTL. Browser GPS permission/hardware, live traffic and hospital systems, real navigation, production deployment and clinical outcomes are unverified.
 
 Emergency desktop/mobile screenshots: `docs/screenshots/emergency-driver-desktop.png` and `docs/screenshots/emergency-driver-mobile.png`. The 15-page project report includes the connected-care workflow and explicit integration boundaries.
+
+## One-click local demo login
+
+Production build, 33 frontend tests and 38 backend tests pass after this change. A separate Chromium check exercised all five demo roles: credentials hidden, role selection, one-click entry, session persistence after reload and logout. API checks reject invalid roles, external Origins and demo entry when the launcher flag is disabled. Demo uses separate ignored storage and ports 3030/5030. Normal/hosted login remains credential-based.

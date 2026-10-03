@@ -198,3 +198,7 @@ python tools/build_upgrade_report.py
 
 The generator reads actual SQLite results and requires a completed 5-fold six-model experiment. It does not publish participant reports or include account passwords.
 "# quraa" 
+
+## One-click local demo
+
+Run `npm run dev:demo` after installing Node/Python dependencies. Open http://localhost:3030, select a role, then click **Enter demo**. Administrator is selected using **Administrator sign in**. Email/password entry is hidden. The launcher creates fictional accounts automatically, uses separate ignored `backend/storage-local-demo/` data and generates its own local session secret. It requires no `.env` setup. The Python backend still needs to run. Normal `npm run dev` and hosted deployments retain credential login. Stop any existing server using ports 3030/5030 before starting the demo. Demo models can be trained through the doctor research tools. Do not place real patient records in the demo database.

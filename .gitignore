@@ -150,3 +150,4 @@ playwright-report/
 
 # Downloadable source archives
 output/source/
+backend/storage-local-demo/

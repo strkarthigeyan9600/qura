@@ -10,7 +10,8 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "dev:demo": "concurrently --kill-others \"vite --mode local-demo --port 3030 --strictPort\" \"python -m backend.local_demo\""
   },
   "dependencies": {
     "clsx": "^2.1.0",
