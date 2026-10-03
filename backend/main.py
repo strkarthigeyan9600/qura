@@ -67,6 +67,8 @@ from backend.chatbot import router as chat_router
 app.include_router(chat_router)
 from backend.photos import router as photo_router
 app.include_router(photo_router)
+from backend.emergency import router as emergency_router
+app.include_router(emergency_router)
 
 @app.middleware('http')
 async def boundaries(request: Request, call_next):

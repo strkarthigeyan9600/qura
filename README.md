@@ -1,6 +1,6 @@
-# Qura — Hybrid Quantum-Classical Research Platform
+# Qura — Medical Research and Connected Emergency Coordination
 
-Qura v2 is a working research prototype with navy and teal patient, doctor and administrator portals. React/TypeScript connects to a modular FastAPI backend, SQLite, scikit-learn and an exact NumPy quantum simulator. Use public, anonymized or synthetic data only. Results are **not diagnoses, treatment advice, clinical validation or proof of quantum advantage**.
+Qura v3 is a working research and emergency-coordination prototype with navy and teal patient, doctor, administrator, ambulance-driver and receiving-hospital portals. React/TypeScript connects to a modular FastAPI backend, SQLite, scikit-learn and an exact NumPy quantum simulator. Use public, anonymized or synthetic data only. Results are **not diagnoses, treatment advice, clinical validation or proof of quantum advantage**.
 
 ## Run locally
 
@@ -19,20 +19,30 @@ python -m backend.seed_demo --train --reports
 npm run dev
 ```
 
-Open http://localhost:3000. API documentation is at http://localhost:5000/docs. The seed command trains all six models with the recorded 5-fold, two-repeat configuration on the public Cleveland Heart benchmark and creates three fictional reports. It does not copy patient measurements into demo profiles. Account creation is idempotent; `--train` deliberately creates another experiment. `--quick` creates a reduced two-model smoke run, which must not be described as the complete benchmark.
+Open http://localhost:3000. Emergency-only demos do not need trained models: run `python -m backend.seed_demo` without `--train --reports`. API documentation is at http://localhost:5000/docs. The seed command trains all six models with the recorded 5-fold, two-repeat configuration on the public Cleveland Heart benchmark and creates three fictional reports. It does not copy patient measurements into demo profiles. Account creation is idempotent; `--train` deliberately creates another experiment. `--quick` creates a reduced two-model smoke run, which must not be described as the complete benchmark.
 
 ### Demo accounts
 
 | Role | Email | Access |
 | --- | --- | --- |
-| Admin | `admin@qura.demo` | Doctor approval, assignments, audit and research |
+| Admin | `admin@qura.demo` | Doctor approval, assignments, dispatch, fleet/hospital setup, audit and research |
 | Doctor | `doctor1@qura.demo` | Synthetic participants 1 and 2 |
 | Doctor | `doctor2@qura.demo` | Synthetic participant 3 |
 | Patient | `patient1@qura.demo` | Own fictional reports and history |
 | Patient | `patient2@qura.demo` | Own fictional reports and history |
 | Patient | `patient3@qura.demo` | Own fictional reports and history |
+| Driver | `driver1@qura.demo`, `driver2@qura.demo` | Assigned ambulance dispatch, pickup, location, destination request and handover |
+| Hospital | `hospital1@qura.demo`, `hospital2@qura.demo`, `hospital3@qura.demo` | Own capacity, selected referrals, acceptance, preparation and admission |
 
 Each uses your private `QURA_DEMO_PASSWORD`. Existing accounts keep their existing password when the seed runs again. Demo consent is granted only for the explicitly fictional profiles. A real signup starts without consent. Doctor self-signups remain pending administrator approval; admin creation is available only through the trusted seed, not public registration.
+
+## Connected care and emergency workflow
+
+Patient health profile and sharing consent → assigned doctor consultation → human emergency outcome → referral → administration verification → ambulance assignment → driver acceptance and pickup → suitable hospital request → hospital acceptance and bed reservation → live tracking/preparation → arrival confirmation → handover → admission and closure.
+
+Routes, traffic predictions, units and hospital capacity are clearly labeled synthetic/manual prototype information. No real ambulance or hospital system is contacted. Driver browser GPS is optional and enabled only by the driver. The workflow does not require clinical models or the assistant. See [FEATURES.md](docs/FEATURES.md) for the requirement matrix, full five-role walkthrough, simulation boundaries and deployment prerequisites.
+
+Driver/hospital signup is restricted to administrator provisioning under **Fleet & hospitals**. Choose **Ambulance driver** or **Receiving hospital** on the login screen. The first demo hospital has no beds and is excluded; B/C require receiving-staff acceptance before departure. Hospitals update current free capacity under **Hospital capacity**.
 
 ## Demo walkthrough
 
@@ -47,8 +57,11 @@ Each uses your private `QURA_DEMO_PASSWORD`. Existing accounts keep their existi
 
 ```mermaid
 flowchart TD
-    UI[React patient / doctor / admin portals] --> AUTH[FastAPI cookie sessions and role checks]
+    UI[React five-role portals] --> AUTH[FastAPI cookie sessions and role checks]
     AUTH --> CLINICAL[Consent, assignments and scoped reports]
+    AUTH --> CARE[Health profiles and assigned consultations]
+    CARE --> ER[Doctor referral / human dispatch / confirmed destination]
+    ER --> LIVE[Authorized GPS / WebSocket / preparation / handover]
     AUTH --> TRAIN[Owned research experiments]
     TRAIN --> SPLIT[Final test reservation / proper development / conformal reservation]
     SPLIT --> CV[Repeated stratified folds with separate calibration rows]
@@ -63,6 +76,7 @@ flowchart TD
 
 | Module | Responsibility |
 | --- | --- |
+| `backend/emergency.py` | Profiles, consultations, fleet, hospital capacity, guarded dispatch, synthetic routes, GPS, WebSockets and admission |
 | `backend/auth.py`, `clinical.py` | Argon2, JWT/refresh cookies, revocation, roles, assignments, consent and audit |
 | `backend/evaluation.py`, `quantum.py` | Train-only transforms, calibration, repeated CV, conformal calibration, exact kernels/VQC |
 | `backend/consensus.py`, `reports.py` | Matched model pair, uncertainty and audience-specific scoped reports |
@@ -72,7 +86,7 @@ flowchart TD
 | `src/PortalApp.tsx`, `src/research/` | Protected portal views, report/review forms, chat, i18n and what-if |
 | `src/ResearchApp.tsx` | Existing science workflow with new evaluation controls and evidence |
 
-Legacy `src/CampusApp.tsx`, campus components/context/services and their 28 regression tests remain untouched. Vite proxies `/api` to the backend. `npm run build` creates `dist`; FastAPI serves it when present. Runtime CSV/joblib files and `research.db` are under `QURA_STORAGE_DIR`, default `backend/storage`.
+Legacy `src/CampusApp.tsx`, campus components/context/services and their 28 regression tests remain untouched. Vite proxies `/api`, including WebSocket upgrades, to the backend. `npm run build` creates `dist`; FastAPI serves it when present. Runtime CSV/joblib files and `research.db` are under `QURA_STORAGE_DIR`, default `backend/storage`.
 
 ## Methodology and honest results
 

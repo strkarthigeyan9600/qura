@@ -14,7 +14,8 @@ def patients(user: dict[str,Any] = Depends(current_user)) -> list[dict[str,Any]]
     with connection() as c:
         if user['role']=='admin':rows=c.execute("SELECT * FROM users WHERE role='patient'").fetchall()
         elif user['role']=='doctor':rows=c.execute('SELECT u.* FROM users u JOIN assignments a ON a.patient_id=u.id WHERE a.doctor_id=?',(user['id'],)).fetchall()
-        else:rows=c.execute('SELECT * FROM users WHERE id=?',(user['id'],)).fetchall()
+        elif user['role']=='patient':rows=c.execute('SELECT * FROM users WHERE id=?',(user['id'],)).fetchall()
+        else:rows=[]
     audit(user['id'],'view','patient-list');return [public_user(r) for r in rows]
 
 class Consent(BaseModel):

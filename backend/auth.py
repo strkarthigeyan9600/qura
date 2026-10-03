@@ -27,8 +27,23 @@ def connection() -> sqlite3.Connection:
 def initialize() -> None:
     """Create identity and append-only audit structures without modifying legacy records."""
     with connection() as c:
+        existing=c.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='users'").fetchone()
+        if existing and "'driver'" not in existing['sql']:
+            # Preserve existing identities and all referencing tables in one transaction.
+            c.execute('PRAGMA foreign_keys=OFF')
+            c.execute('BEGIN IMMEDIATE')
+            try:
+                c.execute("CREATE TABLE users_expanded(id TEXT PRIMARY KEY,role TEXT NOT NULL CHECK(role IN ('patient','doctor','admin','driver','hospital')),name TEXT NOT NULL,email TEXT UNIQUE NOT NULL,password_hash TEXT NOT NULL,language_pref TEXT NOT NULL DEFAULT 'en',approved INTEGER NOT NULL DEFAULT 0,created_at REAL NOT NULL)")
+                c.execute('INSERT INTO users_expanded SELECT * FROM users')
+                c.execute('DROP TABLE users')
+                c.execute('ALTER TABLE users_expanded RENAME TO users')
+                if c.execute('PRAGMA foreign_key_check').fetchone():raise RuntimeError('Identity migration integrity check failed')
+                c.commit()
+            except Exception:
+                c.rollback();raise
+            finally:c.execute('PRAGMA foreign_keys=ON')
         c.executescript('''
-        CREATE TABLE IF NOT EXISTS users(id TEXT PRIMARY KEY,role TEXT NOT NULL CHECK(role IN ('patient','doctor','admin')),name TEXT NOT NULL,email TEXT UNIQUE NOT NULL,password_hash TEXT NOT NULL,language_pref TEXT NOT NULL DEFAULT 'en',approved INTEGER NOT NULL DEFAULT 0,created_at REAL NOT NULL);
+        CREATE TABLE IF NOT EXISTS users(id TEXT PRIMARY KEY,role TEXT NOT NULL CHECK(role IN ('patient','doctor','admin','driver','hospital')),name TEXT NOT NULL,email TEXT UNIQUE NOT NULL,password_hash TEXT NOT NULL,language_pref TEXT NOT NULL DEFAULT 'en',approved INTEGER NOT NULL DEFAULT 0,created_at REAL NOT NULL);
         CREATE TABLE IF NOT EXISTS sessions(id TEXT PRIMARY KEY,user_id TEXT NOT NULL REFERENCES users(id),refresh_hash TEXT NOT NULL,expires_at REAL NOT NULL,revoked INTEGER NOT NULL DEFAULT 0);
         CREATE TABLE IF NOT EXISTS assignments(doctor_id TEXT NOT NULL REFERENCES users(id),patient_id TEXT NOT NULL REFERENCES users(id),PRIMARY KEY(doctor_id,patient_id));
         CREATE TABLE IF NOT EXISTS consents(user_id TEXT PRIMARY KEY REFERENCES users(id),granted INTEGER NOT NULL,updated_at REAL NOT NULL);
@@ -103,6 +118,7 @@ def can_access_patient(user: dict[str,Any],patient_id: str) -> bool:
     """Own patient data, assigned doctor data, or administrative access only."""
     if user['role']=='admin':return True
     if user['role']=='patient':return user['id']==patient_id
+    if user['role']!='doctor':return False
     with connection() as c:return bool(c.execute('SELECT 1 FROM assignments WHERE doctor_id=? AND patient_id=?',(user['id'],patient_id)).fetchone())
 
 def issue_session(response: Response,user: dict[str,Any],session_id: str | None = None) -> None:
@@ -144,7 +160,7 @@ def login(payload: Login,request: Request,response: Response) -> dict[str,Any]:
     try:valid=hasher.verify(row['password_hash'] if row else hasher.hash(secrets.token_urlsafe(20)),payload.password)
     except (VerifyMismatchError,VerificationError):valid=False
     if not valid or not row:raise HTTPException(401,'Email or password is incorrect')
-    if not row['approved']:raise HTTPException(403,'Doctor registration is awaiting administrator approval')
+    if not row['approved']:raise HTTPException(403,'Account registration is awaiting administrator approval')
     user=public_user(row);issue_session(response,user);audit(user['id'],'login','session');return user
 
 @router.post('/refresh')

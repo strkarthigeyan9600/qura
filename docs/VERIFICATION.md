@@ -1,14 +1,14 @@
 # Verification — 3 October 2026
 
-The current branch is `codex/qura-portals-upgrade` in `C:\Users\strka\Downloads\mlp`.
+The current branch is `main` in `C:\Users\strka\Downloads\mlp`.
 
 | Check | Outcome |
 | --- | --- |
 | `npm run build` | Passed, TypeScript and Vite 7.3.6 production output |
 | `npm test` | 33 passed: 28 legacy regressions, 4 real-portal tests, 1 catalog consistency test |
-| `python -m pytest backend -q` | 31 passed using isolated temporary SQLite/artifact storage |
-| `npm run test:e2e` | 11 passed in Chromium; fresh random temporary storage |
-| Full synthetic demo seed | Six fictional profiles, three generated measurement reports, six-model Heart experiment |
+| `python -m pytest backend -q` | 38 passed using isolated temporary SQLite/artifact storage |
+| `npm run test:e2e` | 15 passed in Chromium; fresh random temporary storage |
+| Full synthetic demo seed | Eleven fictional accounts, two ambulance units, three hospitals, three generated measurement reports, six-model Heart experiment |
 | Benchmark | 5-fold CV × 2 repeats, untouched final holdout, matched two-component equal-budget configuration |
 | Manual browser | Login/theme, assigned doctor queue and report details, measured research evaluation, logout |
 
@@ -20,7 +20,7 @@ The complete demo uses seed 42, sigmoid calibration, two PCA features, 120 VQC e
 
 The visual QA account was fictional and temporary; it was removed after logout. No production patient identity or medical data was used. The saved screenshot is `docs/screenshots/qura-navy-teal.jpg`.
 
-The updated 12-page project PDF was rendered page-by-page and visually inspected. Its extracted text includes measured CV results, the API scope and limitations. Sample audience PDFs generated successfully for all nine languages on Windows; rendered Tamil and Arabic samples were inspected for glyph coverage, shaping and layout. These checks do not replace professional language review.
+The updated 15-page project PDF was rendered page-by-page and visually inspected. Its extracted text includes measured CV results, the API scope and limitations. Sample audience PDFs generated successfully for all nine languages on Windows; rendered Tamil and Arabic samples were inspected for glyph coverage, shaping and layout. These checks do not replace professional language review.
 
 ## Security/dependency review
 
@@ -45,3 +45,11 @@ Chromium coverage visits every patient, doctor and administrator portal page at 
 Additional repairs clear stale reports and what-if results after switching pages/reports, clear model selections after changing datasets, reject blank measurement fields before report submission, and display failures from administrator actions, logout, language persistence, chat deletion and voice startup. These checks establish tested behavior, not a guarantee that every possible bug is absent. Physical mobile devices, live external AI, microphone permissions and production hosting remain unverified.
 
 Responsive screenshots: `docs/screenshots/admin-research-desktop.png` and `docs/screenshots/admin-research-mobile.png`. `deploy.zip` has been rebuilt from the current production frontend; it requires the API backend.
+
+## Connected emergency-system upgrade
+
+Seven new backend tests validate the complete model-independent transport chain; consent and role isolation; driver rejection/reassignment; hospital acceptance withdrawal and bed release; concurrent acceptance; capacity-change reconfirmation; WebSocket origin checking/access revocation; admin service-account provisioning; and preservation of identities, sessions and assignments when the role schema expands. The emergency browser workflow uses five separate real cookie contexts, drives consultation/referral/verification/dispatch/pickup/hospital acceptance/preparation/arrival/handover/admission through UI controls, checks zero-capacity exclusion, and receives a location update on a patient WebSocket. Additional browser tests check structured assistant intake, consultation requests and driver/hospital layouts.
+
+The browser run exposed a race in which an earlier action response cleared a newer preparation note typed after a live state update. The handler now clears only the note value it actually submitted. Existing photo, reports, role-navigation, Arabic and consent flows remain in the suite. New care/emergency copy is English; existing core catalogs retain Arabic RTL. Browser GPS permission/hardware, live traffic and hospital systems, real navigation, production deployment and clinical outcomes are unverified.
+
+Emergency desktop/mobile screenshots: `docs/screenshots/emergency-driver-desktop.png` and `docs/screenshots/emergency-driver-mobile.png`. The 15-page project report includes the connected-care workflow and explicit integration boundaries.

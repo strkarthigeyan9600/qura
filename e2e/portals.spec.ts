@@ -117,7 +117,7 @@ for(const role of ['admin','doctor','patient'] as const){
    await page.getByLabel('Email address').fill('admin@qura.demo');await page.getByLabel('Password',{exact:true}).fill(password);
    await page.getByRole('button',{name:'Sign in securely'}).click();await expect(page.getByRole('heading',{name:/Welcome,/})).toBeVisible();
   }else await login(page,role==='doctor'?'doctor1@qura.demo':'patient1@qura.demo',role==='doctor');
-  const pages=role==='admin'?['Dashboard','Users & assignments','Audit log','Photo review','Research tools']:role==='doctor'?['Dashboard','My patients','Review queue','Photo review','Consensus Lab','Assistant','Research tools']:['Dashboard','Measurements','Photo review','My reports','What-if lab','Assistant','Consent'];
+  const pages=role==='admin'?['Dashboard','Users & assignments','Audit log','Emergency cases','Fleet & hospitals','Photo review','Research tools']:role==='doctor'?['Dashboard','My patients','Consultations','Emergency cases','Review queue','Photo review','Consensus Lab','Assistant','Research tools']:['Dashboard','Health profile','Consultations','Emergency cases','Measurements','Photo review','My reports','What-if lab','Assistant','Consent'];
   for(const width of [360,390,768,1024,1440]){
    await page.setViewportSize({width,height:600});
    for(const section of pages){

@@ -25,7 +25,12 @@ def seed_accounts() -> dict[str, dict[str, Any]]:
               ('doctor','Demo Doctor Two','doctor2@qura.demo'),
               ('patient','Synthetic Participant One','patient1@qura.demo'),
               ('patient','Synthetic Participant Two','patient2@qura.demo'),
-              ('patient','Synthetic Participant Three','patient3@qura.demo')]
+              ('patient','Synthetic Participant Three','patient3@qura.demo'),
+              ('driver','Demo Driver One','driver1@qura.demo'),
+              ('driver','Demo Driver Two','driver2@qura.demo'),
+              ('hospital','Demo Hospital A Staff','hospital1@qura.demo'),
+              ('hospital','Demo Hospital B Staff','hospital2@qura.demo'),
+              ('hospital','Demo Hospital C Staff','hospital3@qura.demo')]
     for role,name,email in profiles:
         with connection() as c: row=c.execute('SELECT * FROM users WHERE email=?',(email,)).fetchone()
         users[email]=public_user(row) if row else create_user(name,email,password,role,True)
@@ -35,7 +40,17 @@ def seed_accounts() -> dict[str, dict[str, Any]]:
         for name in ['patient1','patient2','patient3']:
             # This consent applies only to explicitly fictional demo participants.
             c.execute('INSERT OR REPLACE INTO consents VALUES(?,1,?)',(users[name+'@qura.demo']['id'],time.time()))
-    audit(users['admin@qura.demo']['id'],'seed_synthetic_demo','six-fictional-profiles')
+    from backend.emergency import Profile
+    import json
+    with connection() as c:
+        for name in ['patient1','patient2','patient3']:
+            profile=Profile(age=35,symptoms='Synthetic demonstration symptoms',medical_history='Fictional demo history',sharing_consent=True)
+            c.execute('INSERT OR IGNORE INTO health_profiles VALUES(?,?,?)',(users[name+'@qura.demo']['id'],json.dumps(profile.model_dump()),time.time()))
+        for number in [1,2]:
+            c.execute('INSERT OR IGNORE INTO ambulances VALUES(?,?,?,?,?,?,?,?)',(f'demo-ambulance-{number}',users[f'driver{number}@qura.demo']['id'],f'Demo Ambulance 0{number}','available',13.04,80.22,json.dumps(['general','cardiac','trauma']),time.time()))
+        for number,label,lat,lon,beds,icu in [(1,'A',13.051,80.231,0,0),(2,'B',13.066,80.251,3,2),(3,'C',13.083,80.273,4,1)]:
+            c.execute('INSERT OR IGNORE INTO hospitals VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',(f'demo-hospital-{label.lower()}',users[f'hospital{number}@qura.demo']['id'],f'Demo Hospital {label}',lat,lon,beds,icu,1,json.dumps(['general','cardiac','trauma']),1.2,time.time(),'synthetic_demo'))
+    audit(users['admin@qura.demo']['id'],'seed_synthetic_demo','fictional-care-and-transport-resources')
     return users
 
 
@@ -78,7 +93,7 @@ def main() -> None:
     users=seed_accounts()
     if args.train:train_demo(args.quick)
     if args.reports:asyncio.run(seed_reports(users))
-    print('Six fictional accounts ready; password comes from QURA_DEMO_PASSWORD in your private .env.')
+    print('Eleven fictional accounts and transport resources ready; password comes from QURA_DEMO_PASSWORD in your private .env.')
 
 
 if __name__=='__main__':main()

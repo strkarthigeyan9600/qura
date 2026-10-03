@@ -9,7 +9,9 @@ def test_seed_is_synthetic_and_idempotent(monkeypatch):
     monkeypatch.setenv('QURA_DEMO_PASSWORD','SyntheticDemoPass9!')
     first=seed_accounts();second=seed_accounts()
     assert {k:v['id'] for k,v in first.items()}=={k:v['id'] for k,v in second.items()}
-    assert len(first)==6
+    assert len(first)==11
+    assert sum(u['role']=='driver' for u in first.values())==2
+    assert sum(u['role']=='hospital' for u in first.values())==3
     assert sum(u['role']=='doctor' for u in first.values())==2
     with connection() as c:
         rows=c.execute('SELECT patient_id FROM assignments WHERE doctor_id=?',(first['doctor1@qura.demo']['id'],)).fetchall()

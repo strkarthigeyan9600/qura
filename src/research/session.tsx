@@ -1,6 +1,6 @@
 import React, {createContext, useContext, useEffect, useState} from 'react';
 
-export type User = {id: string; role: 'doctor'|'patient'|'admin'; name: string; email: string; language_pref: string; approved: number};
+export type User = {id: string; role: 'doctor'|'patient'|'admin'|'driver'|'hospital'; name: string; email: string; language_pref: string; approved: number};
 type Session = {user: User|null; loading: boolean; setUser: (user: User|null)=>void; logout: ()=>Promise<void>};
 const Context=createContext<Session|null>(null);
 let refreshing: Promise<Response>|null=null;
