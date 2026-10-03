@@ -59,6 +59,10 @@ app.include_router(auth_router)
 app.include_router(clinical_router)
 from backend.reports import router as reports_router
 app.include_router(reports_router)
+from backend.whatif import router as whatif_router
+from backend.pdf_export import router as pdf_router
+app.include_router(whatif_router)
+app.include_router(pdf_router)
 
 @app.middleware('http')
 async def boundaries(request: Request, call_next):

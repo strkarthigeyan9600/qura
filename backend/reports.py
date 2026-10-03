@@ -70,14 +70,17 @@ def submit(payload: Measurements,user: dict[str,Any] = Depends(current_user)) ->
     inference=infer_pair(dataset['id'],payload.sample,user)
     identifier=uuid.uuid4().hex
     report={'id':identifier,'patient_id':patient_id,'dataset_id':dataset['id'],'dataset_name':dataset['name'],'sample':payload.sample,'created_at':time.time(),'status':'needs_review' if inference['consensus']['triage']!='routine' else 'submitted','warnings':warnings,'reviews':[],'language':patient['language_pref'],**inference}
+    from backend.explain import explain_row,patient_summary
+    report['explanation']=explain_row(report['classical']['model_id'],payload.sample)
     report['patient_view']={'summary':'Your doctor will review this result.' if report['status']=='needs_review' else 'This research result is ready to discuss with your doctor.','next_step':'Discuss this model estimate with your assigned doctor. It does not establish a diagnosis.','top_features':[]}
+    report['patient_view']=patient_summary(report,patient['language_pref'])
     save('report',report);audit(user['id'],'create_report','report:'+identifier)
     return audience_view(report,user)
 
 def audience_view(report: dict[str,Any],user: dict[str,Any]) -> dict[str,Any]:
     """Patients receive plain language and model values without technical triage codes."""
     if user['role']!='patient':return report
-    return {k:report[k] for k in ['id','patient_id','dataset_id','dataset_name','sample','created_at','status','warnings','patient_view','classical','quantum','reviews','language']}
+    return {k:report[k] for k in ['id','patient_id','dataset_id','dataset_name','sample','created_at','status','warnings','patient_view','classical','quantum','reviews','language','explanation']}
 
 @router.get('/reports')
 def report_list(user: dict[str,Any] = Depends(current_user)) -> list[dict[str,Any]]:

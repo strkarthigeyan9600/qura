@@ -5,6 +5,7 @@ import {SessionProvider,useSession,request,User} from './research/session';
 import './research.css';
 import './portal.css';
 import ClinicalPanel from './research/ClinicalPanel';
+import WhatIfPanel from './research/WhatIfPanel';
 
 function Login(){
  const {setUser}=useSession();
@@ -27,8 +28,9 @@ function Workspace(){
  {(page==='My patients'||page==='Users & assignments')&&<section className="panel"><h3>{page}</h3><div className="table-scroll"><table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Approval</th></tr></thead><tbody>{(user.role==='admin'?users:patients).map(p=><tr key={p.id}><td>{p.name}</td><td>{p.email}</td><td>{p.role}</td><td>{p.approved?'Active':<button className="secondary" onClick={async()=>{await request(`/admin/doctors/${p.id}/approve`,{});setPage('Dashboard');}}>Approve doctor</button>}</td></tr>)}</tbody></table></div>{user.role==='admin'&&<div className="form-row"><label>Doctor<select value={doctor} onChange={e=>setDoctor(e.target.value)}><option value="">Select</option>{users.filter(u=>u.role==='doctor'&&u.approved).map(u=><option value={u.id} key={u.id}>{u.name}</option>)}</select></label><label>Patient<select value={patient} onChange={e=>setPatient(e.target.value)}><option value="">Select</option>{users.filter(u=>u.role==='patient').map(u=><option value={u.id} key={u.id}>{u.name}</option>)}</select></label><button className="primary" disabled={!doctor||!patient} onClick={async()=>{await request('/admin/assignments',{doctor_id:doctor,patient_id:patient});setError('Assignment saved');}}>Save assignment</button></div>}</section>}
  {page==='Consent'&&<section className="panel consent-panel"><Shield size={30}/><h3>Your consent matters.</h3><p className="muted">Allow storage of the anonymized or synthetic measurements you submit to create research reports. Withdrawing stops new report creation; existing reports remain available for review. Chat history can be deleted separately. Do not submit identifying patient data.</p><label className="consent-toggle"><input type="checkbox" checked={consent} onChange={async e=>{const v=e.target.checked;await request('/consent',{granted:v},'PUT');setConsent(v);}}/>I consent to using my submitted measurements for this research workflow.</label></section>}
  {page==='Audit log'&&<section className="panel"><h3>Append-only audit history</h3><div className="table-scroll"><table><thead><tr><th>Event</th><th>Resource</th><th>Actor</th><th>Time</th></tr></thead><tbody>{audit.map(a=><tr key={a.id}><td>{a.action}</td><td>{a.resource}</td><td>{a.actor_id?.slice(0,10)}</td><td>{new Date(a.timestamp*1000).toLocaleString()}</td></tr>)}</tbody></table></div></section>}
+ {page==='What-if lab'&&<WhatIfPanel/>}
  {['Measurements','My reports','Review queue','Consensus Lab'].includes(page)&&<ClinicalPanel page={page}/>}
- {!['Dashboard','My patients','Users & assignments','Consent','Audit log','Measurements','My reports','Review queue','Consensus Lab'].includes(page)&&<section className="panel"><h3>{page}</h3><p className="muted">This workspace is being connected to the research report services.</p></section>}
+ {!['Dashboard','My patients','Users & assignments','Consent','Audit log','Measurements','My reports','Review queue','Consensus Lab','What-if lab'].includes(page)&&<section className="panel"><h3>{page}</h3><p className="muted">This workspace is being connected to the research report services.</p></section>}
  <footer><span>Research prototype. Not for diagnosis or treatment.</span><span>Qura · Private research workspace</span></footer></main></div></div>;
 }
 function PlusIcon(){return <FlaskConical size={16}/>;}
