@@ -1,5 +1,6 @@
 """Start the persistent, single-process deployment without exposing secrets."""
 import os
+import secrets
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -17,6 +18,9 @@ def main():
         if origin not in allowed:
             allowed.append(origin)
         os.environ['QURA_ALLOWED_ORIGINS'] = ','.join(allowed)
+    if os.getenv('QURA_PUBLIC_DEMO') == 'true':
+        os.environ['QURA_SEED_DEMO'] = 'true'
+        os.environ['QURA_DEMO_PASSWORD'] = secrets.token_urlsafe(32) + 'Aa9!'
     if os.getenv('QURA_SEED_DEMO', 'false').lower() == 'true':
         from backend.seed_demo import seed_accounts
         from backend.settings import storage_dir

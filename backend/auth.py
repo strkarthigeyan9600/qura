@@ -173,9 +173,22 @@ def local_demo_allowed(request: Request) -> bool:
             and urlsplit(request.headers.get('origin') or (request.headers.get('referer', '') if request.method == 'GET' else '')).hostname in ('localhost', '127.0.0.1', '::1'))
 
 
+def demo_allowed(request: Request) -> bool:
+    from urllib.parse import urlsplit
+    from backend.settings import storage_dir
+    if local_demo_allowed(request):
+        return True
+    if os.getenv('QURA_PUBLIC_DEMO') != 'true' or storage_dir().name != 'qura-public-demo':
+        return False
+    value = request.headers.get('origin') or (request.headers.get('referer', '') if request.method == 'GET' else '')
+    parsed = urlsplit(value)
+    origin = parsed.scheme + '://' + parsed.netloc
+    return origin in allowed_origins()
+
+
 @router.get('/demo-status')
 def demo_status(request: Request) -> dict[str, bool]:
-    return {'enabled': local_demo_allowed(request)}
+    return {'enabled': demo_allowed(request)}
 
 
 class DemoLogin(BaseModel):
@@ -184,8 +197,8 @@ class DemoLogin(BaseModel):
 
 @router.post('/demo-login')
 def demo_login(payload: DemoLogin, request: Request, response: Response) -> dict[str, Any]:
-    if not local_demo_allowed(request):
-        raise HTTPException(403, 'One-click demo login is available only in the local isolated demo')
+    if not demo_allowed(request):
+        raise HTTPException(403, 'One-click entry is available only in the isolated fictional demo')
     accounts = {'patient': 'patient1', 'doctor': 'doctor1', 'admin': 'admin', 'driver': 'driver1', 'hospital': 'hospital2'}
     if payload.role not in accounts:
         raise HTTPException(422, 'Choose a supported demo role')

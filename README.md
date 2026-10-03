@@ -202,3 +202,7 @@ The generator reads actual SQLite results and requires a completed 5-fold six-mo
 ## One-click local demo
 
 Run `npm run dev:demo` after installing Node/Python dependencies. Open http://localhost:3030, select a role, then click **Enter demo**. Administrator is selected using **Administrator sign in**. Email/password entry is hidden. The launcher creates fictional accounts automatically, uses separate ignored `backend/storage-local-demo/` data and generates its own local session secret. It requires no `.env` setup. The Python backend still needs to run. Normal `npm run dev` and hosted deployments retain credential login. Stop any existing server using ports 3030/5030 before starting the demo. Demo models can be trained through the doctor research tools. Do not place real patient records in the demo database.
+
+## Hosted one-click demo
+
+The free Render blueprint enables `QURA_PUBLIC_DEMO=true`: select any role and enter without credentials. This serves a shared fictional demonstration with forcibly separate temporary storage; data resets and free compute limits still apply. Never use real records. Follow deployment/GITHUB_HOSTING.md to deploy from GitHub. GitHub Pages cannot run the Python API, and Vercel requires an API rewrite to the deployed backend.

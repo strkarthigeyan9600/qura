@@ -18,7 +18,7 @@ services:
         value: https://qura-ge6g.vercel.app
       - key: QURA_SEED_DEMO
         value: 'true'
-      - key: QURA_DEMO_PASSWORD
-        sync: false
+      - key: QURA_PUBLIC_DEMO
+        value: 'true'
       - key: QURA_EXTERNAL_AI_ENABLED
         value: 'false'

@@ -1,5 +1,6 @@
 """Environment-backed settings; no browser-visible credentials."""
 import os
+import tempfile
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -7,7 +8,7 @@ load_dotenv(Path(__file__).resolve().parents[1] / '.env')
 
 def storage_dir() -> Path:
     """Resolve the runtime directory (tests override QURA_STORAGE_DIR)."""
-    directory = Path(os.getenv('QURA_STORAGE_DIR', str(Path(__file__).parent / 'storage'))).resolve()
+    directory = (Path(tempfile.gettempdir()) / 'qura-public-demo' if os.getenv('QURA_PUBLIC_DEMO') == 'true' else Path(os.getenv('QURA_STORAGE_DIR', str(Path(__file__).parent / 'storage')))).resolve()
     directory.mkdir(parents=True, exist_ok=True)
     return directory
 

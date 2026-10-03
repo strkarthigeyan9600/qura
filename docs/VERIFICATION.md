@@ -57,3 +57,7 @@ Emergency desktop/mobile screenshots: `docs/screenshots/emergency-driver-desktop
 ## One-click local demo login
 
 Production build, 33 frontend tests and 38 backend tests pass after this change. A separate Chromium check exercised all five demo roles: credentials hidden, role selection, one-click entry, session persistence after reload and logout. API checks reject invalid roles, external Origins and demo entry when the launcher flag is disabled. Demo uses separate ignored storage and ports 3030/5030. Normal/hosted login remains credential-based.
+
+## Hosted fictional demo entry
+
+The public-demo configuration passes five-role API session checks with forced separate temporary storage. Missing/unknown origins and disabled demo mode reject password-free access. Production build and 33 frontend tests pass. Live Render/Vercel deployment and cloud execution remain unverified because hosting account access is not connected. Free hosting remains disposable; no permanent-storage claim.
