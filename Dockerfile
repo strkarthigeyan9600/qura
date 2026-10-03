@@ -10,4 +10,4 @@ COPY backend/requirements.lock backend/requirements.lock
 RUN pip install --no-cache-dir -r backend/requirements.lock
 COPY backend backend
 COPY --from=frontend /app/dist dist
-CMD ["python", "-m", "uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "5000"]
+CMD ["python", "-m", "backend.start_hosted"]

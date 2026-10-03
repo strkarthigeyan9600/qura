@@ -1,0 +1,28 @@
+# Paid persistent service: review Render pricing before creating it.
+services:
+  - type: web
+    name: qura-fullstack
+    runtime: docker
+    plan: standard
+    branch: main
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    disk:
+      name: qura-data
+      mountPath: /var/data/qura
+      sizeGB: 5
+    envVars:
+      - key: QURA_STORAGE_DIR
+        value: /var/data/qura
+      - key: QURA_JWT_SECRET
+        generateValue: true
+      - key: QURA_COOKIE_SECURE
+        value: 'true'
+      - key: QURA_ALLOWED_ORIGINS
+        value: https://qura-ge6g.vercel.app
+      - key: QURA_SEED_DEMO
+        value: 'true'
+      - key: QURA_DEMO_PASSWORD
+        sync: false
+      - key: QURA_EXTERNAL_AI_ENABLED
+        value: 'false'
