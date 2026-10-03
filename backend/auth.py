@@ -42,7 +42,7 @@ def initialize() -> None:
 def secret() -> str:
     """Require an environment secret; never silently issue insecure JWTs."""
     value=os.getenv('QURA_JWT_SECRET','')
-    if len(value)<32: raise HTTPException(503,'Set QURA_JWT_SECRET to at least 32 random characters in .env')
+    if len(value)<32 or value.startswith('replace-with-'): raise HTTPException(503,'Set QURA_JWT_SECRET to at least 32 random characters in .env')
     return value
 
 def audit(actor: str | None,action: str,resource: str) -> None:
@@ -65,6 +65,8 @@ def public_user(row: Any) -> dict[str,Any]:
 def create_user(name: str,email: str,password: str,role: str = 'patient',approved: bool = False,language: str = 'en') -> dict[str,Any]:
     """Create users; elevated approval is restricted to administrative callers."""
     email=email.strip().lower()
+    if language not in ['en','ta','hi','te','ml','kn','es','fr','ar']:
+        raise HTTPException(422,'Unsupported language')
     if not re.fullmatch(r'[^\s@]+@[^\s@]+\.[^\s@]+',email):raise HTTPException(422,'Enter a valid email')
     if len(password)<12 or not re.search('[A-Z]',password) or not re.search('[a-z]',password) or not re.search('[0-9]',password) or not re.search(r'[^A-Za-z0-9]',password):
         raise HTTPException(422,'Use at least 12 characters with uppercase, lowercase, a number and a symbol')
@@ -136,6 +138,7 @@ def register(payload: Register,request: Request) -> dict[str,Any]:
 def login(payload: Login,request: Request,response: Response) -> dict[str,Any]:
     """Authenticate with generic failures and per-IP/email rate limiting."""
     bucket=hashlib.sha256((str(request.client.host if request.client else 'local')+payload.email.lower()).encode()).hexdigest()
+    rate_limit('login-ip:'+str(request.client.host if request.client else 'local'),50,300)
     rate_limit('login:'+bucket,8,300)
     with connection() as c:row=c.execute('SELECT * FROM users WHERE email=?',(payload.email.strip().lower(),)).fetchone()
     try:valid=hasher.verify(row['password_hash'] if row else hasher.hash(secrets.token_urlsafe(20)),payload.password)
@@ -153,13 +156,18 @@ def refresh(request: Request,response: Response) -> dict[str,Any]:
     with connection() as c:
         row=c.execute('SELECT u.*,s.refresh_hash FROM users u JOIN sessions s ON s.user_id=u.id WHERE s.id=? AND s.revoked=0 AND s.expires_at>?',(sid,time.time())).fetchone()
         if not row or not row['approved'] or not secrets.compare_digest(row['refresh_hash'],hashlib.sha256(token.encode()).hexdigest()):raise HTTPException(401,'Sign in again')
-    user=public_user(row);issue_session(response,user,sid);return user
+    user=public_user(row);issue_session(response,user,sid);audit(user['id'],'refresh','session');return user
 
 @router.post('/logout')
 def logout(request: Request,response: Response) -> dict[str,bool]:
     """Revoke the refresh-linked session even if the short access token expired."""
-    value=request.cookies.get('qura_refresh','');sid=value.split('.')[0]
-    with connection() as c:c.execute('UPDATE sessions SET revoked=1 WHERE id=?',(sid,))
+    value=request.cookies.get('qura_refresh','');sid,_,token=value.partition('.')
+    actor=None
+    with connection() as c:
+        session=c.execute('SELECT user_id,refresh_hash FROM sessions WHERE id=?',(sid,)).fetchone()
+        if session and secrets.compare_digest(session['refresh_hash'],hashlib.sha256(token.encode()).hexdigest()):
+            actor=session['user_id'];c.execute('UPDATE sessions SET revoked=1 WHERE id=?',(sid,))
+    if actor:audit(actor,'logout','session')
     response.delete_cookie('qura_access',path='/api');response.delete_cookie('qura_refresh',path='/api/auth')
     return {'logged_out':True}
 

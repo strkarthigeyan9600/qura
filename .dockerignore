@@ -4,3 +4,8 @@ dist
 backend/storage
 __pycache__
 .venv
+.env
+.env.*
+tmp
+test-results
+playwright-report

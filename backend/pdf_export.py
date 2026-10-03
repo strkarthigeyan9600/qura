@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 from io import BytesIO
 import os
+import hashlib
 from pathlib import Path
 from xml.sax.saxutils import escape
 from fastapi import APIRouter,Depends,HTTPException
@@ -24,7 +25,16 @@ def create_pdf(report: dict[str,Any],audience: str,language: str) -> bytes:
     fontname='Helvetica'
     for candidate in candidates:
         if candidate.is_file():
-            pdfmetrics.registerFont(TTFont('QuraUnicode',str(candidate)));fontname='QuraUnicode';break
+            fontname='QuraUnicode'+language+hashlib.sha256(str(candidate).encode()).hexdigest()[:8]
+            if fontname not in pdfmetrics.getRegisteredFontNames():
+                pdfmetrics.registerFont(TTFont(fontname,str(candidate)))
+            break
+    if language in ['ta','hi','te','ml','kn','ar']:
+        from backend.i18n import message
+        face=pdfmetrics.getFont(fontname).face
+        mapping=getattr(face,'charToGlyph',{})
+        if any(ord(char)>127 and ord(char) not in mapping for char in message('research',language)):
+            raise HTTPException(503,'Configure QURA_PDF_FONT with glyph coverage for the requested language')
     styles=getSampleStyleSheet()
     styles.add(ParagraphStyle(name='QuraBody',fontName=fontname,fontSize=10,leading=15,spaceAfter=10,shaping=True,wordWrap='RTL' if language=='ar' else None,alignment=2 if language=='ar' else 0))
     story=[]

@@ -70,16 +70,21 @@ app.include_router(chat_router)
 async def boundaries(request: Request, call_next):
     """Enforce sessions, research roles, origin checks and security headers."""
     path=request.url.path
+    user=None
     try:
         if request.method not in ['GET','HEAD','OPTIONS']:
             origin=request.headers.get('origin')
             if origin and origin not in allowed_origins():raise HTTPException(403,'Origin is not allowed')
+            if not origin and request.cookies and __import__('os').getenv('QURA_TESTING')!='1':
+                raise HTTPException(403,'Cookie-authenticated changes require an allowed Origin header')
         public=['/api/health','/api/auth/register','/api/auth/login','/api/auth/refresh','/api/auth/logout']
         if path.startswith('/api/') and path not in public and request.method!='OPTIONS':
             user=current_user(request)
             if any(path.startswith(prefix) for prefix in ['/api/datasets','/api/models','/api/experiments','/api/preprocess']) and user['role'] not in ['doctor','admin']:
                 raise HTTPException(403,'Research tools are limited to doctors and admins')
         response=await call_next(request)
+        if user and 200<=response.status_code<300:
+            audit(user['id'],request.method.lower(),path[:250])
     except HTTPException as error:
         response=JSONResponse(status_code=error.status_code,content={'detail':error.detail},headers=error.headers)
     response.headers['X-Content-Type-Options']='nosniff'
@@ -221,6 +226,11 @@ def predict(request: Prediction,user=Depends(current_user)):
     model = owned(request.model_id,'model',user)
     info = get(model['dataset_id'],'dataset')
     frame = pd.DataFrame(request.samples)
+    if any(set(row)!=set(info['features']) for row in request.samples):
+        raise HTTPException(422,'Every sample must contain exactly the dataset features')
+    for row in request.samples:
+        if any(isinstance(v,(int,float)) and not np.isfinite(v) for v in row.values()):
+            raise HTTPException(422,'Sample values must be finite')
     if set(frame.columns)!=set(info['features']): raise HTTPException(422,'Sample columns must exactly match dataset features')
     try:
         pipeline = joblib.load(ROOT / f'{model["id"]}.joblib')

@@ -92,6 +92,13 @@ def evaluate_model(name: str, X: pd.DataFrame, y: np.ndarray, cfg: dict[str, Any
         fitted,_,_=fit_calibrated(name,proper.iloc[training],proper_y[training],cfg,cfg['seed']+index)
         cv_results.append(metrics(proper_y[validation],fitted.predict_proba(proper.iloc[validation])[:,1]))
     fitted,count,background=fit_calibrated(name,proper,proper_y,cfg,cfg['seed'])
+    seed_spread=None
+    if name==NAMES[-1]:
+        ensemble=fitted.calibrated_classifiers_[0].estimator.estimator.named_steps['model']
+        losses=np.asarray(ensemble.losses_)
+        seed_spread={'seeds':[cfg['seed']+i for i in range(cfg['vqc_seeds'])],
+                     'training_losses':losses.tolist(),'loss_mean':float(losses.mean()),
+                     'loss_std':float(losses.std()),'note':'Member training losses, not clinical performance intervals.'}
     duration=time.perf_counter()-started
     inference=time.perf_counter(); probability=fitted.predict_proba(final_X)[:,1]
     inference_ms=(time.perf_counter()-inference)*1000/len(final_X)
@@ -104,4 +111,4 @@ def evaluate_model(name: str, X: pd.DataFrame, y: np.ndarray, cfg: dict[str, Any
     identifier=uuid.uuid4().hex
     joblib.dump(fitted,artifact_root/f'{identifier}.joblib')
     summary={key:summarize([r[key] for r in cv_results]) for key in ['accuracy','sensitivity','specificity','auc']}
-    return dict(id=identifier, name=name, **metrics(final_y,probability), cv=summary, cv_scores=[{k:r[k] for k in summary} for r in cv_results], training_time=round(duration,3), inference_ms=round(inference_ms,3), train_samples=count, test_samples=len(final_X), conformal={'alpha':.1,'quantile':quantile,'samples':len(scores),'method':'Split conformal label set; NOT a probability confidence interval'}, final_predictions={'probability':probability.tolist(),'labels':final_y.tolist()}, background=json.loads(background.to_json(orient='records')), ranges={c:{'min':float(X[c].min()),'max':float(X[c].max())} for c in X.select_dtypes(include='number')}, importance=sorted([{'feature':f,'value':float(v)} for f,v in zip(X.columns,importance)],key=lambda r:r['value'],reverse=True), calibration=cfg['calibration'], version='qura-2-zz-calibrated', seed_spread={'seeds':[cfg['seed']+i for i in range(cfg['vqc_seeds'])],'note':'VQC averages independently initialized members; fold spread is reported in CV.'} if name==NAMES[-1] else None)
+    return dict(id=identifier, name=name, **metrics(final_y,probability), cv=summary, cv_scores=[{k:r[k] for k in summary} for r in cv_results], training_time=round(duration,3), inference_ms=round(inference_ms,3), train_samples=count, test_samples=len(final_X), conformal={'alpha':.1,'quantile':quantile,'samples':len(scores),'method':'Split conformal label set; NOT a probability confidence interval'}, final_predictions={'probability':probability.tolist(),'labels':final_y.tolist()}, background=json.loads(background.to_json(orient='records')), ranges={c:{'min':float(X[c].min()),'max':float(X[c].max())} for c in X.select_dtypes(include='number')}, importance=sorted([{'feature':f,'value':float(v)} for f,v in zip(X.columns,importance)],key=lambda r:r['value'],reverse=True), calibration=cfg['calibration'], version='qura-2-zz-calibrated', seed_spread=seed_spread)

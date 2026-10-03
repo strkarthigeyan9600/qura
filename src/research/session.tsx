@@ -3,6 +3,7 @@ import React, {createContext, useContext, useEffect, useState} from 'react';
 export type User = {id: string; role: 'doctor'|'patient'|'admin'; name: string; email: string; language_pref: string; approved: number};
 type Session = {user: User|null; loading: boolean; setUser: (user: User|null)=>void; logout: ()=>Promise<void>};
 const Context=createContext<Session|null>(null);
+let refreshing: Promise<Response>|null=null;
 
 /** Same-origin credential transport; refresh access once without exposing tokens. */
 export async function request<T=any>(path: string, body?: unknown, method?: string): Promise<T> {
@@ -10,8 +11,9 @@ export async function request<T=any>(path: string, body?: unknown, method?: stri
   if(body instanceof FormData) options.body=body;
   else if(body!==undefined){options.headers={'Content-Type':'application/json'};options.body=JSON.stringify(body);}
   let response=await fetch('/api'+path,options);
-  if(response.status===401&&!path.startsWith('/auth/')){
-    const refresh=await fetch('/api/auth/refresh',{method:'POST',credentials:'same-origin'});
+  if(response.status===401&&(!path.startsWith('/auth/')||path==='/auth/me')){
+    if(!refreshing) refreshing=fetch('/api/auth/refresh',{method:'POST',credentials:'same-origin'}).finally(()=>{refreshing=null;});
+    const refresh=await refreshing;
     if(refresh.ok)response=await fetch('/api'+path,options);
     else window.dispatchEvent(new Event('qura-session-expired'));
   }
