@@ -7,7 +7,7 @@ let refreshing: Promise<Response>|null=null;
 
 /** Same-origin credential transport; refresh access once without exposing tokens. */
 export async function request<T=any>(path: string, body?: unknown, method?: string): Promise<T> {
-  const options: RequestInit={credentials:'same-origin',method:method||(body?'POST':'GET')};
+  const options: RequestInit={credentials:'same-origin',method:method||(body!==undefined?'POST':'GET')};
   if(body instanceof FormData) options.body=body;
   else if(body!==undefined){options.headers={'Content-Type':'application/json'};options.body=JSON.stringify(body);}
   let response=await fetch('/api'+path,options);
@@ -17,7 +17,7 @@ export async function request<T=any>(path: string, body?: unknown, method?: stri
     if(refresh.ok)response=await fetch('/api'+path,options);
     else window.dispatchEvent(new Event('qura-session-expired'));
   }
-  const data=await response.json();
+  let data:any;try{data=await response.json();}catch{throw new Error('The server returned an unexpected response. Please try again.');}
   if(!response.ok)throw new Error(typeof data.detail==='string'?data.detail:JSON.stringify(data.detail));
   return data as T;
 }

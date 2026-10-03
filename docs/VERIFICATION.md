@@ -7,7 +7,7 @@ The current branch is `codex/qura-portals-upgrade` in `C:\Users\strka\Downloads\
 | `npm run build` | Passed, TypeScript and Vite 7.3.6 production output |
 | `npm test` | 33 passed: 28 legacy regressions, 4 real-portal tests, 1 catalog consistency test |
 | `python -m pytest backend -q` | 31 passed using isolated temporary SQLite/artifact storage |
-| `npm run test:e2e` | 4 passed in Chromium; fresh random temporary storage |
+| `npm run test:e2e` | 11 passed in Chromium; fresh random temporary storage |
 | Full synthetic demo seed | Six fictional profiles, three generated measurement reports, six-model Heart experiment |
 | Benchmark | 5-fold CV × 2 repeats, untouched final holdout, matched two-component equal-budget configuration |
 | Manual browser | Login/theme, assigned doctor queue and report details, measured research evaluation, logout |
@@ -35,3 +35,13 @@ Live Anthropic requests were not made: no provider account/model was configured,
 Core UI labels, safety messages and patient templates are translated across nine languages, but specialized research descriptions and technical PDF headings retain English fallback. This is not a claim of complete professionally reviewed UI translation. Emergency and output safeguards are phrase/number guards; they are not clinical safety certification. SQLite append-only triggers are not protection against a filesystem administrator. Counterfactual search is bounded and not globally minimal; SHAP can return an explicitly labeled global fallback.
 
 Parkinsons repeated recordings need grouped subject validation. Descriptive CV intervals summarize correlated folds; conformal sets are label sets, not probability intervals. No quantum advantage or diagnostic validity is claimed.
+
+## Navigation and responsive-layout repair
+
+Research tools now render inside the signed-in role portal: administrators keep their sidebar, role heading, user management, audit and sign-out controls. Login verifies the exact selected role. Sidebar scrolling on short desktops and labeled wrapping navigation on small screens prevent hidden controls. Content grids, tool tabs, forms, tables, photo cards and chat resize without page-level horizontal overflow. Table and circuit overflow stays inside their own scroll areas.
+
+Chromium coverage visits every patient, doctor and administrator portal page at 360, 390, 768, 1024 and 1440 pixels with a 600-pixel viewport height, plus all research tabs and Arabic RTL shells. Login/signup are checked down to 320 pixels. Added workflows verify exact-role sign-in rejection and administrator approval/assignment followed by doctor access. Tests capture uncaught page errors; the screenshot accounts and data are fictional.
+
+Additional repairs clear stale reports and what-if results after switching pages/reports, clear model selections after changing datasets, reject blank measurement fields before report submission, and display failures from administrator actions, logout, language persistence, chat deletion and voice startup. These checks establish tested behavior, not a guarantee that every possible bug is absent. Physical mobile devices, live external AI, microphone permissions and production hosting remain unverified.
+
+Responsive screenshots: `docs/screenshots/admin-research-desktop.png` and `docs/screenshots/admin-research-mobile.png`. `deploy.zip` has been rebuilt from the current production frontend; it requires the API backend.

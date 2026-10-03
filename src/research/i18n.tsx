@@ -1,4 +1,4 @@
-import React from 'react';
+import React,{useState} from 'react';
 import i18next from 'i18next';
 import {initReactI18next,useTranslation} from 'react-i18next';
 import en from './locales/en.json';
@@ -22,7 +22,7 @@ export {i18next};
 
 /** Shared persisted language control; authenticated preferences stay server-side. */
 export function LanguageSelector(){
- const {user,setUser}=useSession();const {i18n}=useTranslation();
- async function change(code:string){await i18n.changeLanguage(code);if(user){await request('/auth/me',{language_pref:code},'PATCH');setUser({...user,language_pref:code});}}
- return <label className="language-picker">{tr('Language')}<select aria-label={tr('Language')} value={i18n.language} onChange={e=>void change(e.target.value)}>{languages.map(([code,label])=><option key={code} value={code}>{label}</option>)}</select></label>;
+ const {user,setUser}=useSession();const {i18n}=useTranslation();const [error,setError]=useState(''),[busy,setBusy]=useState(false);
+ async function change(code:string){const previous=i18n.language;setBusy(true);setError('');try{await i18n.changeLanguage(code);if(user){await request('/auth/me',{language_pref:code},'PATCH');setUser({...user,language_pref:code});}}catch(e){await i18n.changeLanguage(previous);setError(e instanceof Error?e.message:tr('Request failed'));}finally{setBusy(false);}}
+ return <label className="language-picker">{tr('Language')}<select aria-label={tr('Language')} disabled={busy} value={i18n.language} onChange={e=>void change(e.target.value)}>{languages.map(([code,label])=><option key={code} value={code}>{label}</option>)}</select>{error&&<span role="alert">{error}</span>}</label>;
 }
