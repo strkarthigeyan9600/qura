@@ -5,6 +5,9 @@ from backend.main import app
 from backend.quantum import statevector, QuantumKernel, VQC
 
 client = TestClient(app)
+from backend.auth import create_user
+create_user('Test Doctor','doctor@test.local','TestingPass123!','doctor',True)
+assert client.post('/api/auth/login',json={'email':'doctor@test.local','password':'TestingPass123!'}).status_code==200
 
 def test_quantum_normalization_and_reproducibility():
     x = np.array([.2,.5,.7])

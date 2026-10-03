@@ -9,7 +9,9 @@ from concurrent.futures import ThreadPoolExecutor
 import joblib
 import numpy as np
 import pandas as pd
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Depends, Request
+from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from sklearn.datasets import load_breast_cancer
@@ -48,7 +50,47 @@ def listing(kind):
     with db() as c:
         return [json.loads(r[0]) for r in c.execute('SELECT body FROM records WHERE kind=? ORDER BY rowid DESC', (kind,))]
 
-app = FastAPI(title='Qura Research API', version='1.0.0')
+from backend.auth import router as auth_router, current_user, roles, audit
+from backend.clinical import router as clinical_router
+from backend.settings import allowed_origins
+app = FastAPI(title='Qura Research API', version='2.0.0')
+app.add_middleware(CORSMiddleware,allow_origins=allowed_origins(),allow_credentials=True,allow_methods=['GET','POST','PATCH','PUT','DELETE'],allow_headers=['Content-Type','Authorization'])
+app.include_router(auth_router)
+app.include_router(clinical_router)
+
+@app.middleware('http')
+async def boundaries(request: Request, call_next):
+    """Enforce sessions, research roles, origin checks and security headers."""
+    path=request.url.path
+    try:
+        if request.method not in ['GET','HEAD','OPTIONS']:
+            origin=request.headers.get('origin')
+            if origin and origin not in allowed_origins():raise HTTPException(403,'Origin is not allowed')
+        public=['/api/health','/api/auth/register','/api/auth/login','/api/auth/refresh','/api/auth/logout']
+        if path.startswith('/api/') and path not in public and request.method!='OPTIONS':
+            user=current_user(request)
+            if any(path.startswith(prefix) for prefix in ['/api/datasets','/api/models','/api/experiments','/api/preprocess']) and user['role'] not in ['doctor','admin']:
+                raise HTTPException(403,'Research tools are limited to doctors and admins')
+        response=await call_next(request)
+    except HTTPException as error:
+        response=JSONResponse(status_code=error.status_code,content={'detail':error.detail},headers=error.headers)
+    response.headers['X-Content-Type-Options']='nosniff'
+    response.headers['X-Frame-Options']='DENY'
+    response.headers['Referrer-Policy']='same-origin'
+    response.headers['Cache-Control']='no-store' if path.startswith('/api/') else 'no-cache'
+    return response
+
+
+def visible(record,user):
+    """Public benchmarks and legacy models are shared; uploaded records have owners."""
+    return not record.get('owner_id') or record.get('owner_id')==user['id'] or user['role']=='admin'
+
+def owned(identifier,kind,user):
+    """Hide non-owned research records behind a 404."""
+    record=get(identifier,kind)
+    if not visible(record,user):raise HTTPException(404,'Record not found')
+    return record
+
 pool = ThreadPoolExecutor(max_workers=1)
 
 def register(frame, name, target, id=None):
@@ -81,18 +123,21 @@ for identifier, title in [('heart','UCI Cleveland Heart Disease'),('parkinsons',
 def health():
     return {'status':'ready', 'backend':'exact statevector simulator', 'research_only':True}
 @app.get('/api/datasets')
-def datasets(): return listing('dataset')
+def datasets(user=Depends(current_user)): return [r for r in listing('dataset') if visible(r,user)]
 @app.get('/api/datasets/{id}')
-def dataset(id: str): return get(id, 'dataset')
+def dataset(id: str,user=Depends(current_user)): return owned(id,'dataset',user)
 @app.post('/api/datasets/upload')
-async def upload(file: UploadFile = File(...), target: str = Form(...)):
+async def upload(file: UploadFile = File(...), target: str = Form(...),user=Depends(current_user)):
     if not file.filename or not file.filename.lower().endswith('.csv'):
         raise HTTPException(422, 'Upload a CSV file')
     data = await file.read(10*1024*1024+1)
     if len(data) > 10*1024*1024: raise HTTPException(413, 'Maximum upload size is 10 MB')
     try: frame = pd.read_csv(io.BytesIO(data))
     except Exception: raise HTTPException(422, 'Cannot read CSV')
-    return register(frame, Path(file.filename).name, target)
+    record=register(frame,Path(file.filename).name,target)
+    record['owner_id']=user['id']
+    audit(user['id'],'upload','dataset:'+record['id'])
+    return save('dataset',record)
 
 class Config(BaseModel):
     dataset_id: str
@@ -139,33 +184,33 @@ def train(config, experiment):
     save('experiment',experiment)
 
 @app.post('/api/models/train')
-def start(config: Config):
-    get(config.dataset_id,'dataset')
+def start(config: Config,user=Depends(current_user)):
+    owned(config.dataset_id,'dataset',user)
     if not config.models or any(m not in MODELS for m in config.models) or len(config.models)>6:
         raise HTTPException(422,'Select between one and six supported models')
     if config.calibration not in ['sigmoid','isotonic']: raise HTTPException(422,'Use sigmoid or isotonic calibration')
     if config.selection not in ['pca','select']: raise HTTPException(422,'Select pca or select')
     if any(e['status']=='running' for e in listing('experiment')): raise HTTPException(409,'A training run is already active')
-    experiment = save('experiment',dict(id=uuid.uuid4().hex,status='running',completed=0,total=len(config.models),config=config.model_dump(),created_at=time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime())))
+    experiment = save('experiment',dict(id=uuid.uuid4().hex,owner_id=user['id'],status='running',completed=0,total=len(config.models),config=config.model_dump(),created_at=time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime())))
     pool.submit(train,config,experiment)
     return experiment
 @app.get('/api/models')
-def models(): return listing('model')
+def models(user=Depends(current_user)): return [r for r in listing('model') if visible(r,user)]
 @app.get('/api/models/{id}/metrics')
-def metrics(id: str): return get(id,'model')
+def metrics(id: str,user=Depends(current_user)): return owned(id,'model',user)
 @app.get('/api/models/{id}/explain')
-def explain(id: str): return {'method':'Held-out permutation importance; accuracy decrease','features':get(id,'model')['importance']}
+def explain(id: str,user=Depends(current_user)): return {'method':'Held-out permutation importance; accuracy decrease','features':owned(id,'model',user)['importance']}
 @app.get('/api/experiments')
-def experiments(): return listing('experiment')
+def experiments(user=Depends(current_user)): return [r for r in listing('experiment') if visible(r,user)]
 @app.get('/api/experiments/{id}')
-def experiment(id: str): return get(id,'experiment')
+def experiment(id: str,user=Depends(current_user)): return owned(id,'experiment',user)
 
 class Prediction(BaseModel):
     model_id: str
     samples: list[dict] = Field(min_length=1,max_length=100)
 @app.post('/api/models/predict')
-def predict(request: Prediction):
-    model = get(request.model_id,'model')
+def predict(request: Prediction,user=Depends(current_user)):
+    model = owned(request.model_id,'model',user)
     info = get(model['dataset_id'],'dataset')
     frame = pd.DataFrame(request.samples)
     if set(frame.columns)!=set(info['features']): raise HTTPException(422,'Sample columns must exactly match dataset features')
@@ -176,8 +221,8 @@ def predict(request: Prediction):
     return {'positive_class':model['positive_class'],'predictions':[{'class':info['classes'][int(p>=.5)],'probability':float(p)} for p in probabilities], 'explanation':model['importance'][:5], 'note':'Probability is a model estimate, not calibrated clinical confidence.'}
 
 @app.post('/api/preprocess')
-def preview_preprocessing(config: Config):
-    info=get(config.dataset_id,'dataset')
+def preview_preprocessing(config: Config,user=Depends(current_user)):
+    info=owned(config.dataset_id,'dataset',user)
     return {'dataset_id':info['id'],'strategy':'Training-only median/mode imputation, standard scaling, categorical one-hot encoding','selection':config.selection,'components':config.qubits,'test_size':config.test_size,'seed':config.seed,'missing':info['missing'],'duplicates':info['duplicates']}
 
 # Recover interrupted jobs after a process restart.

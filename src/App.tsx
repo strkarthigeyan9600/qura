@@ -1,1 +1,1 @@
-export { default } from './ResearchApp';
+export {default} from './PortalApp';

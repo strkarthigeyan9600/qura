@@ -142,3 +142,8 @@ backend/storage/
 __pycache__/
 .pytest_cache/
 .venv/
+
+dist/
+tmp/
+test-results/
+playwright-report/
