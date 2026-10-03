@@ -1,0 +1,8 @@
+import React, { useEffect, useState } from 'react';
+import { TabKey, TAB_LABELS } from './NavigationSidebar';
+import { ShieldAlert, MapPin, ChevronRight, Menu } from 'lucide-react';
+export const Header: React.FC<{ activeTab: TabKey; setActiveTab: (tab: TabKey) => void; onEmergencyClick: () => void; onMenuClick?: () => void }> = ({ activeTab, setActiveTab, onEmergencyClick, onMenuClick }) => {
+const [now, setNow] = useState(new Date());
+useEffect(() => { const timer = setInterval(() => setNow(new Date()), 30000); return () => clearInterval(timer); }, []);
+return <header className="product-header"><button className="header-college" onClick={() => setActiveTab('home')} aria-label="College home"><img src="/assets/rmk_logo.png" alt="" /><span><strong>R.M.K.<br />ENGINEERING COLLEGE</strong><small>(AN AUTONOMOUS INSTITUTION)</small></span></button><div className="breadcrumb"><button className="mobile-menu" onClick={onMenuClick} aria-label="Toggle navigation"><Menu size={22} /></button><button onClick={() => setActiveTab('home')}>Campus</button><ChevronRight size={14} /><span>{TAB_LABELS[activeTab]}</span></div><div className="header-actions"><span className="campus-location"><MapPin size={14} /> Kavaraipettai, Tamil Nadu</span><span className="header-date">{now.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' })}<small>{now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' })}</small></span><button aria-label="Emergency assistance" onClick={onEmergencyClick} className="emergency-button"><ShieldAlert size={16} /><span>Emergency</span></button></div></header>;
+};
