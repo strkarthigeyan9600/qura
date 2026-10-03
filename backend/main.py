@@ -57,6 +57,8 @@ app = FastAPI(title='Qura Research API', version='2.0.0')
 app.add_middleware(CORSMiddleware,allow_origins=allowed_origins(),allow_credentials=True,allow_methods=['GET','POST','PATCH','PUT','DELETE'],allow_headers=['Content-Type','Authorization'])
 app.include_router(auth_router)
 app.include_router(clinical_router)
+from backend.reports import router as reports_router
+app.include_router(reports_router)
 
 @app.middleware('http')
 async def boundaries(request: Request, call_next):
