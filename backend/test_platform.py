@@ -25,7 +25,7 @@ def test_end_to_end():
     dataset=client.get('/api/datasets/wisconsin').json()
     assert dataset['samples']==569
     assert client.post('/api/datasets/upload',files={'file':('bad.txt',b'bad')},data={'target':'y'}).status_code==422
-    response=client.post('/api/models/train',json={'dataset_id':'wisconsin','models':['Logistic regression','Support vector machine','Random forest','Gradient boosting','Quantum kernel','Variational quantum classifier'],'qubits':2,'depth':1,'iterations':10})
+    response=client.post('/api/models/train',json={'dataset_id':'wisconsin','models':['Logistic regression','Support vector machine','Random forest','Gradient boosting','Quantum kernel','Variational quantum classifier'],'qubits':2,'depth':1,'iterations':10,'cv_folds':2,'cv_repeats':1,'vqc_seeds':1,'row_budget':40})
     assert response.status_code==200, response.text
     id=response.json()['id']
     for _ in range(180):
