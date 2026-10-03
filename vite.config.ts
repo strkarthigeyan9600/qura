@@ -4,6 +4,9 @@ import path from 'path';
 
 export default defineConfig(({mode}) => ({
     plugins: [react()],
+    define: {
+        'import.meta.env.VITE_DEMO_ENTRY': JSON.stringify(process.env.VITE_DEMO_ENTRY ?? (process.env.VERCEL === '1' ? 'true' : 'false')),
+    },
     resolve: {
         alias: {
             '@': path.resolve(__dirname, './src'),

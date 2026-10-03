@@ -29,3 +29,7 @@ This generates root vercel.json with the API rewrite before the frontend fallbac
 Verify https://qura-ge6g.vercel.app/api/health returns JSON, then check login, persisted /api/auth/me cookies and logout. Demo passwords come from the backend's environment, not the frontend or your local computer. Authentication responses must not be cached. Verify the proxy preserves cookies and the browser Origin; do not weaken authentication or Origin validation if it does not.
 
 The external HTTP rewrite must be verified with the actual hosting service. WebSocket forwarding requires a separate deployment check; authorized HTTP polling remains the emergency UI fallback. Persistent storage, training resource limits, TLS, backups and access controls remain hosting responsibilities. No real emergency integrations are supplied by deployment.
+
+## Demo entry appearance
+
+Vercel builds (VERCEL=1) now show role selection and Enter demo immediately, even if the demo-status API is missing. Set VITE_DEMO_ENTRY=false explicitly for a credential-based frontend. This controls appearance only: backend authorization is still enforced. Missing API responses show a clear demo-backend connection error. Local builds can opt in with VITE_DEMO_ENTRY=true. Redeploy the latest commit to update the screen; backend connectivity remains required for functional entry.

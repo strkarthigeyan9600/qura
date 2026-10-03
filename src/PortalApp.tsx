@@ -17,8 +17,9 @@ import WhatIfPanel from './research/WhatIfPanel';
 function Login(){
  useTranslation();
  const {setUser}=useSession();
- const [demo,setDemo]=useState(false);
- useEffect(()=>{request<{enabled:boolean}>('/auth/demo-status').then(d=>setDemo(d.enabled)).catch(()=>{});},[]);
+ const demoEntry=(import.meta as any).env?.VITE_DEMO_ENTRY==='true';
+ const [demo,setDemo]=useState(demoEntry);
+ useEffect(()=>{request<{enabled:boolean}>('/auth/demo-status').then(d=>setDemo(demoEntry||d.enabled)).catch(()=>{});},[]);
  const [portal,setPortal]=useState<User['role']>('patient'),[signup,setSignup]=useState(false),[name,setName]=useState(''),[email,setEmail]=useState(''),[password,setPassword]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false),[language,setLanguage]=useState(localStorage.getItem('qura-language')||'en');
  async function submit(e:React.FormEvent){e.preventDefault();setError('');setBusy(true);try{
    if(demo){setUser(await request<User>('/auth/demo-login',{role:portal}));}

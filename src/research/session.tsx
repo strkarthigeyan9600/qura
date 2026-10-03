@@ -17,7 +17,7 @@ export async function request<T=any>(path: string, body?: unknown, method?: stri
     if(refresh.ok)response=await fetch('/api'+path,options);
     else window.dispatchEvent(new Event('qura-session-expired'));
   }
-  let data:any;try{data=await response.json();}catch{throw new Error('The server returned an unexpected response. Please try again.');}
+  let data:any;try{data=await response.json();}catch{throw new Error(path==='/auth/demo-login'?'Demo backend is not connected. Connect this website to the hosted Qura API to enter the workspace.':'The server returned an unexpected response. Please try again.');}
   if(!response.ok)throw new Error(typeof data.detail==='string'?data.detail:JSON.stringify(data.detail));
   return data as T;
 }
