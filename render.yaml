@@ -1,19 +1,15 @@
-# Paid persistent service: review Render pricing before creating it.
+# Free demonstration service. Runtime data is lost on restart/redeploy.
 services:
   - type: web
     name: qura-fullstack
     runtime: docker
-    plan: standard
+    plan: free
     branch: main
     dockerfilePath: ./Dockerfile
     healthCheckPath: /api/health
-    disk:
-      name: qura-data
-      mountPath: /var/data/qura
-      sizeGB: 5
     envVars:
       - key: QURA_STORAGE_DIR
-        value: /var/data/qura
+        value: /tmp/qura
       - key: QURA_JWT_SECRET
         generateValue: true
       - key: QURA_COOKIE_SECURE
