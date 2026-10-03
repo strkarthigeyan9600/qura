@@ -6,13 +6,15 @@ The current branch is `codex/qura-portals-upgrade` in `C:\Users\strka\Downloads\
 | --- | --- |
 | `npm run build` | Passed, TypeScript and Vite 7.3.6 production output |
 | `npm test` | 33 passed: 28 legacy regressions, 4 real-portal tests, 1 catalog consistency test |
-| `python -m pytest backend -q` | 28 passed using isolated temporary SQLite/artifact storage |
-| `npm run test:e2e` | 3 passed in Chromium; fresh random temporary storage |
+| `python -m pytest backend -q` | 31 passed using isolated temporary SQLite/artifact storage |
+| `npm run test:e2e` | 4 passed in Chromium; fresh random temporary storage |
 | Full synthetic demo seed | Six fictional profiles, three generated measurement reports, six-model Heart experiment |
 | Benchmark | 5-fold CV × 2 repeats, untouched final holdout, matched two-component equal-budget configuration |
 | Manual browser | Login/theme, assigned doctor queue and report details, measured research evaluation, logout |
 
 The browser flows exercise patient signup → consent → synthetic measurements → own report → chat; assigned doctor login → note → approval; and owner history deletion → Arabic RTL. A test caught a delayed consent toggle and another caught demo-fill availability before schemas loaded. Both interactions were fixed. Reusing an E2E directory also retained language preferences; each run now uses a fresh random directory.
+
+Photo-review update: a fourth browser flow uploads a synthetic PNG as an assigned patient, opens it under the assigned doctor's account, posts a human review, and verifies that the patient sees the note. New backend tests cover consent/assignment prerequisites, access to image bytes, cross-patient and unassigned-doctor isolation, immediate assignment revocation, administrator read-only access, owner deletion, invalid/oversized images and EXIF removal. Images are never model inputs or assistant context. The production build passes, with a non-fatal warning that the main bundle exceeds 500 kB before gzip.
 
 The complete demo uses seed 42, sigmoid calibration, two PCA features, 120 VQC evaluations per member and 3 member seeds. Measured development mean AUC: logistic regression 0.8945, quantum kernel 0.7007, VQC 0.8530. The report generator reads the remaining models, final-test results and seed-loss spread from SQLite. Browser smoke runs use fewer folds/two models and are not the published benchmark results.
 

@@ -98,6 +98,16 @@ Kernel SHAP targets the complete calibrated pipeline. Optional Tree SHAP explain
 
 What-if changes do not overwrite reports. Counterfactuals are bounded one-feature grid candidates normalized by dataset range, not a proven global minimum, causal effect, or recommendation to alter health measurements.
 
+## Private photo review
+
+Patients can open **Photo review**, select a JPEG, PNG or WebP image (up to 10 MB), add an optional description, give explicit photo-storage consent and send it to their assigned doctor. Research consent must already be enabled and an administrator must assign an approved doctor first. Doctors open **Photo review**, choose a submission and send a review note; the patient sees that note with the reviewed status. Photos do not require a trained model or tabular measurements.
+
+Use anonymized or synthetic photos only. Crop out faces, names and identifying details. The app does not detect infections or diagnose images, and photos are never sent to the AI assistant. Only the owner, currently assigned doctors and authorized administrators can view them. Administrators have read access; only an assigned doctor can post a review. The owner can delete a photo and its notes after confirming; content-free audit metadata remains.
+
+The backend validates actual decoded JPEG/PNG/WebP content, rejects animations/oversized dimensions, caps images at 20 megapixels, applies orientation, limits the stored image to 2400 pixels per side, and re-encodes it as JPEG without EXIF metadata. Bytes live in `QURA_STORAGE_DIR/private_photos`, which is **not** mounted as public static content. Every image request rechecks access and is sent with `no-store`. Stored images are not encrypted at rest; the existing local-prototype deployment limitations apply. Withdrawing consent stops new submissions; delete existing photos separately when needed.
+
+New endpoints: `POST/GET /api/photos`, `GET /api/photos/{id}/image`, `POST /api/photos/{id}/review`, `DELETE /api/photos/{id}`. New modules: `backend/photos.py`, `backend/test_photos.py`, `src/research/PhotoPanel.tsx`. No additional environment secret or external service is required.
+
 ## Languages and assistant
 
 Catalogs cover English, Tamil, Hindi, Telugu, Malayalam, Kannada, Spanish, French and Arabic, with persisted user preference and Arabic RTL layout. Core portal labels, patient templates and safety messages are translated. Advanced research descriptions and some PDF headings retain explicit English fallback; complete professional translation is **not** claimed. Original benchmark feature names/units remain recognizable.

@@ -1,8 +1,8 @@
 {
   "Production frontend build": "Passed (Vite 7.3.6)",
   "Vitest frontend/regression tests": "33 passed across 3 files",
-  "Pytest backend tests": "28 passed; isolated temporary storage",
-  "Playwright browser flows": "3 passed; fresh isolated temporary storage",
+  "Pytest backend tests": "31 passed; isolated temporary storage",
+  "Playwright browser flows": "4 passed, including private photo upload and assigned doctor review; fresh isolated temporary storage",
   "Measured demo": "Six Heart models; 5 folds repeated twice; separate final holdout",
   "Manual browser check": "Login/theme, assigned doctor queue/detail, research evaluation and logout checked",
   "npm audit": "5 high transitive findings in retained Tailwind 3 toolchain",

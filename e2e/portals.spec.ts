@@ -53,3 +53,27 @@ test('patient owns history, can delete it and switch to Arabic RTL',async({page}
  await expect(page.locator('html')).toHaveAttribute('dir','rtl');
  expect(await page.request.get('/api/models').then(r=>r.status())).toBe(403);
 });
+
+test('patient uploads a synthetic photo and assigned doctor sends a review',async({page,browser})=>{
+ await login(page,'patient1@qura.demo');
+ await page.getByRole('button',{name:'Photo review',exact:true}).click();
+ const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=','base64');
+ await page.getByLabel('Photo file',{exact:true}).setInputFiles({name:'synthetic.png',mimeType:'image/png',buffer:png});
+ await page.getByLabel('Optional description').fill('Synthetic test photo for human review.');
+ await page.getByRole('checkbox').check();
+ await page.getByRole('button',{name:'Send photo for review'}).click();
+ await expect(page.getByRole('status')).toContainText('Photo sent');
+ await expect(page.locator('.photo-card')).toHaveCount(1);
+ const doctorContext=await browser.newContext();const doctorPage=await doctorContext.newPage();
+ await login(doctorPage,'doctor1@qura.demo',true);
+ await doctorPage.getByRole('button',{name:'Photo review',exact:true}).click();
+ await doctorPage.locator('.photo-card').first().click();
+ await doctorPage.getByLabel('Photo review note').fill('Synthetic photo reviewed. No automatic image diagnosis.');
+ await doctorPage.getByRole('button',{name:'Send review to patient'}).click();
+ await expect(doctorPage.locator('.review-note')).toContainText('Synthetic photo reviewed');
+ await page.reload();
+ await page.getByRole('button',{name:'Photo review',exact:true}).click();
+ await page.locator('.photo-card').first().click();
+ await expect(page.locator('.review-note')).toContainText('Synthetic photo reviewed');
+ await doctorContext.close();
+});
