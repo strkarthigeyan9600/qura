@@ -20,17 +20,18 @@ router=APIRouter(prefix='/api',tags=['PDF reports'])
 def create_pdf(report: dict[str,Any],audience: str,language: str) -> bytes:
     """Render stored facts with a Unicode font, never manufactured model results."""
     stream=BytesIO();font=os.getenv('QURA_PDF_FONT','')
-    candidates=[Path(font)] if font else [Path('C:/Windows/Fonts/arial.ttf'),Path('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf')]
+    candidates=[Path(font)] if font else [Path('C:/Windows/Fonts/Nirmala.ttc') if language in ['ta','hi','te','ml','kn'] else Path('C:/Windows/Fonts/arial.ttf'),Path('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf')]
     fontname='Helvetica'
     for candidate in candidates:
         if candidate.is_file():
             pdfmetrics.registerFont(TTFont('QuraUnicode',str(candidate)));fontname='QuraUnicode';break
     styles=getSampleStyleSheet()
-    styles.add(ParagraphStyle(name='QuraBody',fontName=fontname,fontSize=10,leading=15,spaceAfter=10))
+    styles.add(ParagraphStyle(name='QuraBody',fontName=fontname,fontSize=10,leading=15,spaceAfter=10,shaping=True,wordWrap='RTL' if language=='ar' else None,alignment=2 if language=='ar' else 0))
     story=[]
     def paragraph(text: str) -> None:story.append(Paragraph(escape(text),styles['QuraBody']))
     story.append(Paragraph('QURA | RESEARCH REPORT',styles['Title']))
-    paragraph('Research prototype. Not for diagnosis or treatment.')
+    from backend.i18n import message
+    paragraph(message('research',language))
     paragraph('Report '+report['id']+' | '+report['dataset_name'])
     paragraph('Audience: '+audience+' | Language: '+language)
     paragraph(report['patient_view']['summary']);paragraph(report['patient_view']['next_step'])
@@ -55,5 +56,7 @@ def pdf(identifier: str,audience: str = 'patient',language: str = 'en',user: dic
     if audience not in ['patient','doctor'] or language not in ['en','ta','hi','te','ml','kn','es','fr','ar']:raise HTTPException(422,'Unsupported audience or language')
     if user['role']=='patient' and audience!='patient':raise HTTPException(403,'Clinician exports require doctor access')
     report=report_access(identifier,user)
+    from backend.explain import patient_summary
+    report={**report,'patient_view':patient_summary(report,language)}
     audit(user['id'],'export_pdf','report:'+identifier)
     return Response(create_pdf(report,audience,language),media_type='application/pdf',headers={'Content-Disposition':f'attachment; filename="qura-{identifier[:8]}-{audience}.pdf"'})

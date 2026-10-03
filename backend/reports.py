@@ -56,7 +56,7 @@ def report_access(identifier: str,user: dict[str,Any]) -> dict[str,Any]:
     return report
 
 @router.post('/reports')
-def submit(payload: Measurements,user: dict[str,Any] = Depends(current_user)) -> dict[str,Any]:
+async def submit(payload: Measurements,user: dict[str,Any] = Depends(current_user)) -> dict[str,Any]:
     """Create a consented, ownership-scoped dual-model report."""
     rate_limit('reports:'+user['id'],10,60)
     patient_id=payload.patient_id or user['id']
@@ -74,6 +74,12 @@ def submit(payload: Measurements,user: dict[str,Any] = Depends(current_user)) ->
     report['explanation']=explain_row(report['classical']['model_id'],payload.sample)
     report['patient_view']={'summary':'Your doctor will review this result.' if report['status']=='needs_review' else 'This research result is ready to discuss with your doctor.','next_step':'Discuss this model estimate with your assigned doctor. It does not establish a diagnosis.','top_features':[]}
     report['patient_view']=patient_summary(report,patient['language_pref'])
+    from backend.chatbot import provider_reply
+    from backend.explain import fact_payload,numbers_consistent
+    narrative=await provider_reply('Explain these research facts in simple language. Do not invent numbers or diagnose.',patient['language_pref'],{'role':'patient'},{'report':fact_payload(report)})
+    if narrative and numbers_consistent(narrative,{'report':fact_payload(report)}):
+        report['patient_view']['next_step']=narrative
+        report['patient_view']['source']='Anthropic (validated structured facts)'
     save('report',report);audit(user['id'],'create_report','report:'+identifier)
     return audience_view(report,user)
 
@@ -108,6 +114,8 @@ def review(identifier: str,payload: Review,user: dict[str,Any] = Depends(roles('
     report=report_access(identifier,user)
     report['reviews'].append({'doctor_id':user['id'],'doctor_name':user['name'],'timestamp':time.time(),**payload.model_dump()})
     if payload.action!='note':report['status']='reviewed'
+    from backend.explain import patient_summary
+    report['patient_view']=patient_summary(report,report['language'])
     save('report',report);audit(user['id'],payload.action,'report:'+identifier);return report
 
 @router.get('/consensus/lab/{dataset_id}')

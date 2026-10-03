@@ -63,6 +63,8 @@ from backend.whatif import router as whatif_router
 from backend.pdf_export import router as pdf_router
 app.include_router(whatif_router)
 app.include_router(pdf_router)
+from backend.chatbot import router as chat_router
+app.include_router(chat_router)
 
 @app.middleware('http')
 async def boundaries(request: Request, call_next):
